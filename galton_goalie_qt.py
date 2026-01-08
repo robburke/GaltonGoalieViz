@@ -81,8 +81,8 @@ class VideoThread(QThread):
         self.motion_threshold = DEFAULT_MOTION_THRESHOLD
         self.min_contour_area = DEFAULT_MIN_CONTOUR_AREA
         self.trail_fade = 70  # Fade rate for mode 1 (Motion Trails)
-        self.trail_size = 2  # Thickness/dilation iterations for mode 1
-        self.long_exposure_duration = 50  # Persistence for mode 2 (1-100)
+        self.trail_size = 3  # Thickness/dilation iterations for mode 1
+        self.long_exposure_duration = 85  # Persistence for mode 2 (1-100)
         self.trail_color_index = 0
         self.show_bucket_overlay = True  # Show bucket dividers on video
         self.flip_horizontal = False  # Flip camera feed horizontally
@@ -1005,26 +1005,26 @@ class SettingsDialog(QDialog):
         mode_settings_layout = QVBoxLayout()
 
         # Trail size (Mode 1)
-        trail_size_label = QLabel(f"Trail Size (Mode 1): {self.video_thread.trail_size if self.video_thread else 2}")
+        trail_size_label = QLabel(f"Trail Size (Mode 1): {self.video_thread.trail_size if self.video_thread else 3}")
         mode_settings_layout.addWidget(trail_size_label)
 
         self.trail_size_slider = QSlider(Qt.Horizontal)
         self.trail_size_slider.setMinimum(1)
         self.trail_size_slider.setMaximum(5)
-        self.trail_size_slider.setValue(self.video_thread.trail_size if self.video_thread else 2)
+        self.trail_size_slider.setValue(self.video_thread.trail_size if self.video_thread else 3)
         self.trail_size_slider.valueChanged.connect(
             lambda v: self.update_visual_value('trail_size', v, trail_size_label)
         )
         mode_settings_layout.addWidget(self.trail_size_slider)
 
         # Long exposure duration (Mode 2)
-        exp_duration_label = QLabel(f"Streak Duration (Mode 2): {self.video_thread.long_exposure_duration if self.video_thread else 50}%")
+        exp_duration_label = QLabel(f"Streak Duration (Mode 2): {self.video_thread.long_exposure_duration if self.video_thread else 85}%")
         mode_settings_layout.addWidget(exp_duration_label)
 
         self.exp_duration_slider = QSlider(Qt.Horizontal)
         self.exp_duration_slider.setMinimum(1)
         self.exp_duration_slider.setMaximum(100)
-        self.exp_duration_slider.setValue(self.video_thread.long_exposure_duration if self.video_thread else 50)
+        self.exp_duration_slider.setValue(self.video_thread.long_exposure_duration if self.video_thread else 85)
         self.exp_duration_slider.valueChanged.connect(
             lambda v: self.update_visual_value('exposure_duration', v, exp_duration_label)
         )
