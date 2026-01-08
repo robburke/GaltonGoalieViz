@@ -13,7 +13,10 @@
       "Bash(git config:*)",
       "Bash(gh:*)",
       "Bash(git branch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(pip install:*)"
     ]
   }
 }

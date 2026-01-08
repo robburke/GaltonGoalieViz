@@ -12,7 +12,7 @@ Inspired by the [CrunchLabs](https://www.crunchlabs.com/) ["Galton's Goalie" pro
 4. **Displays a real-time histogram** showing the distribution (which forms a bell curve over time)
 5. **Visualizes ball paths** with motion trails or long-exposure effects
 
-![Demo concept: balls roll through pegs and are tracked as they enter the goal]
+![Demo: Real-time ball tracking and histogram visualization](demo.gif)
 
 ## Installation
 
