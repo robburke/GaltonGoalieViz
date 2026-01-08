@@ -2110,7 +2110,7 @@ class MainWindow(QMainWindow):
             cv2.addWeighted(overlay, 0.7, display_frame, 0.3, 0, display_frame)
 
             # Add "PAUSED" text
-            font = cv2.FONT_HERSHEY_BOLD
+            font = cv2.FONT_HERSHEY_SIMPLEX
             text = "PAUSED"
             font_scale = 2.0
             thickness = 4
