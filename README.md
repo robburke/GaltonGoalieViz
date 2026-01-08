@@ -19,13 +19,13 @@ Inspired by the [CrunchLabs](https://www.crunchlabs.com/) ["Galton's Goalie" pro
 Requires Python 3.7+ and OpenCV.
 
 ```bash
-pip install opencv-python numpy
+pip install opencv-python numpy pyqt5
 ```
 
 ## Quick Start
 
 ```bash
-python galton_goalie.py
+python galton_goalie_qt.py
 ```
 
 1. Point your webcam at the Galton board goal area
