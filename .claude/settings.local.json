@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile:*)",
+      "Bash(timeout /t 3)",
+      "Bash(ping:*)",
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(git init:*)",
+      "Bash(dir:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

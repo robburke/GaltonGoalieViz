@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Personal config (calibration settings are user-specific)
+galton_config.json
+
+# Recordings folder (can be large, user-generated)
+recordings/
+
+# Temporary files
+nul
+*.tmp
