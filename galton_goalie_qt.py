@@ -91,6 +91,9 @@ class VideoThread(QThread):
         self.cooldown_counters = [0] * NUM_BUCKETS
         self.glow_counters = [0] * NUM_BUCKETS
 
+        # Frame storage for clean recording
+        self.clean_frame = None  # Frame before overlays for clean recording mode
+
         # Trail colors (BGR format)
         self.trail_colors = [
             ([50, 150, 255], "Orange"),
@@ -175,6 +178,9 @@ class VideoThread(QThread):
             frame = self.apply_long_exposure(frame)
         elif self.trail_mode == 3:
             frame = self.apply_ultra_long_exposure(frame)
+
+        # Save clean frame (camera + trails, no overlays) for clean recording mode
+        self.clean_frame = frame.copy()
 
         # Draw bucket overlay if enabled
         if self.show_bucket_overlay and self.goal_region:
@@ -1098,6 +1104,32 @@ class SettingsDialog(QDialog):
         format_group.setLayout(format_layout)
         layout.addWidget(format_group)
 
+        # Recording mode
+        mode_group = QGroupBox("Recording Mode")
+        mode_layout = QVBoxLayout()
+
+        self.record_full_ui_check = QCheckBox("Record Full UI (with bucket overlay)")
+        # Load current state from parent
+        if self.parent() and hasattr(self.parent(), 'record_full_ui'):
+            self.record_full_ui_check.setChecked(self.parent().record_full_ui)
+        else:
+            self.record_full_ui_check.setChecked(True)  # Default to full UI
+        self.record_full_ui_check.setToolTip(
+            "Checked: Record camera feed with bucket dividers and overlays\n"
+            "Unchecked: Record clean video (camera + trails only, no overlays)"
+        )
+        self.record_full_ui_check.stateChanged.connect(self.toggle_record_mode)
+        mode_layout.addWidget(self.record_full_ui_check)
+
+        mode_info = QLabel("Tip: Uncheck for clean videos perfect for sharing.\n"
+                          "The histogram is never included in recordings.")
+        mode_info.setWordWrap(True)
+        mode_info.setStyleSheet("color: #BDC3C7; font-style: italic;")
+        mode_layout.addWidget(mode_info)
+
+        mode_group.setLayout(mode_layout)
+        layout.addWidget(mode_group)
+
         layout.addStretch()
         return widget
 
@@ -1348,6 +1380,11 @@ class SettingsDialog(QDialog):
         if self.parent():
             self.parent().histogram_widget.show_stats_on_graph = (state == Qt.Checked)
             self.parent().histogram_widget.update()
+
+    def toggle_record_mode(self, state):
+        """Toggle recording mode between full UI and clean video."""
+        if self.parent():
+            self.parent().record_full_ui = (state == Qt.Checked)
 
     def change_output_folder(self):
         """Change output folder for recordings."""
@@ -1617,6 +1654,7 @@ class MainWindow(QMainWindow):
         self.record_filename = None
         self.current_frame = None  # Store latest frame for calibration
         self.recording_output_folder = "."  # Default to current directory
+        self.record_full_ui = True  # True = record with overlays, False = clean video only
 
         # Load camera index from config before creating video thread
         camera_index = 0  # Default camera
@@ -2088,7 +2126,17 @@ class MainWindow(QMainWindow):
 
         # Write to video file if recording (write original frame without pause overlay)
         if self.recording and self.video_writer is not None:
-            self.video_writer.write(frame)
+            # Choose which frame to record based on mode
+            if self.record_full_ui:
+                # Record full UI with bucket overlay
+                self.video_writer.write(frame)
+            else:
+                # Record clean video (camera + trails only, no overlays)
+                if self.video_thread.clean_frame is not None:
+                    self.video_writer.write(self.video_thread.clean_frame)
+                else:
+                    # Fallback to regular frame if clean frame not available
+                    self.video_writer.write(frame)
 
     @pyqtSlot(list)
     def on_detection(self, buckets):
@@ -2380,6 +2428,8 @@ class MainWindow(QMainWindow):
                     # Recording settings
                     if 'recording_output_folder' in config:
                         self.recording_output_folder = config['recording_output_folder']
+                    if 'record_full_ui' in config:
+                        self.record_full_ui = config['record_full_ui']
 
             except Exception as e:
                 print(f"Could not load config: {e}")
@@ -2411,6 +2461,7 @@ class MainWindow(QMainWindow):
 
         # Recording settings
         config['recording_output_folder'] = self.recording_output_folder
+        config['record_full_ui'] = self.record_full_ui
 
         try:
             with open(CONFIG_FILE, 'w') as f:
