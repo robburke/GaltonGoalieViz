@@ -2128,8 +2128,8 @@ class MainWindow(QMainWindow):
         if self.recording and self.video_writer is not None:
             # Choose which frame to record based on mode
             if self.record_full_ui:
-                # Record full UI with bucket overlay
-                self.video_writer.write(frame)
+                # Record full UI - capture entire application window
+                self.record_full_ui_frame()
             else:
                 # Record clean video (camera + trails only, no overlays)
                 if self.video_thread.clean_frame is not None:
@@ -2299,6 +2299,31 @@ class MainWindow(QMainWindow):
                 )
                 msg_box.exec_()
 
+    def record_full_ui_frame(self):
+        """Capture and record the entire UI window."""
+        try:
+            # Grab the central widget as a pixmap
+            pixmap = self.centralWidget().grab()
+
+            # Convert QPixmap to QImage
+            qimage = pixmap.toImage()
+
+            # Convert QImage to numpy array
+            width = qimage.width()
+            height = qimage.height()
+            ptr = qimage.bits()
+            ptr.setsize(height * width * 4)  # 4 bytes per pixel (RGBA)
+            arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
+
+            # Convert RGBA to BGR for OpenCV
+            frame_bgr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
+
+            # Write to video
+            if self.video_writer is not None:
+                self.video_writer.write(frame_bgr)
+        except Exception as e:
+            print(f"Error capturing full UI: {e}")
+
     def on_record_clicked(self):
         """Toggle recording."""
         self.recording = not self.recording
@@ -2311,9 +2336,19 @@ class MainWindow(QMainWindow):
             filename = f"galton_recording_{timestamp}.mp4"
             self.record_filename = os.path.join(self.recording_output_folder, filename)
 
-            # Get frame dimensions from current frame
-            if self.current_frame is not None:
-                height, width = self.current_frame.shape[:2]
+            # Get frame dimensions based on recording mode
+            if self.record_full_ui:
+                # Get dimensions from central widget for full UI recording
+                width = self.centralWidget().width()
+                height = self.centralWidget().height()
+            else:
+                # Get dimensions from current frame for clean video recording
+                if self.current_frame is not None:
+                    height, width = self.current_frame.shape[:2]
+                else:
+                    width = height = 0
+
+            if width > 0 and height > 0:
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 fps = self.video_thread.fps if self.video_thread.fps > 0 else 30.0
                 self.video_writer = cv2.VideoWriter(
