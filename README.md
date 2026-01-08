@@ -2,7 +2,7 @@
 
 A real-time computer vision app that tracks balls shot through a Galton board (bean machine) and visualizes the resulting bell curve distribution.
 
-Built to work with the [Crunch Labs](https://www.crunchlabs.com/) "Galton's Goalie" project, but could be adapted for any similar setup.
+Inspired by, and built to work with, the [Crunch Labs](https://www.crunchlabs.com/) ["Galton's Goalie" project](https://www.crunchlabs.com/products/galtons-goalie?srsltid=AfmBOoqQ8V6aj6XHOs5uSdeRfJU1NJJluky5hNH1kjtexU9fOu944Vwk), but could be adapted for any similar setup.
 
 ## What It Does
 
