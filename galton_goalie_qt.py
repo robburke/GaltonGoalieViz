@@ -2302,21 +2302,23 @@ class MainWindow(QMainWindow):
     def record_full_ui_frame(self):
         """Capture and record the entire UI window."""
         try:
+            from PyQt5.QtGui import QImage
+
             # Grab the central widget as a pixmap
             pixmap = self.centralWidget().grab()
 
-            # Convert QPixmap to QImage
-            qimage = pixmap.toImage()
+            # Convert QPixmap to QImage in RGB888 format (consistent format)
+            qimage = pixmap.toImage().convertToFormat(QImage.Format_RGB888)
 
             # Convert QImage to numpy array
             width = qimage.width()
             height = qimage.height()
             ptr = qimage.bits()
-            ptr.setsize(height * width * 4)  # 4 bytes per pixel (RGBA)
-            arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 4))
+            ptr.setsize(height * width * 3)  # 3 bytes per pixel (RGB)
+            arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 3))
 
-            # Convert RGBA to BGR for OpenCV
-            frame_bgr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
+            # Convert RGB to BGR for OpenCV
+            frame_bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
 
             # Write to video
             if self.video_writer is not None:
