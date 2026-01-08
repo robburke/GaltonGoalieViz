@@ -11,12 +11,7 @@ This file tracks feature requests, improvements, and bug fixes for the Galton's 
 
 ## Backlog Items
 
----
-
-### 🟡 Change title from ALLCAPS to Regular Caps
-**Priority:** Medium
-**Description:** So it's Galton's Goalie, not GALTON'S GOALIE
-
+*(All items completed!)*
 
 
 ## Completed Items
@@ -45,6 +40,31 @@ This file tracks feature requests, improvements, and bug fixes for the Galton's 
 **Priority:** Medium
 **Description:** Actions group should be above Statistics group.
 **Completed:** Reordered sidebar groups - Actions now appears before Statistics.
+
+### 🟢 Change title from ALLCAPS to Regular Caps
+**Priority:** Medium
+**Description:** So it's Galton's Goalie, not GALTON'S GOALIE
+**Completed:** Changed all titles from ALLCAPS to Regular Caps: "Galton's Goalie", "Mode Selection", "Controls", "Actions", "Statistics", and help dialog categories.
+
+### 🟢 Add keyboard shortcut P for Pause
+**Priority:** Medium
+**Description:** Pause function can be activated with P key
+**Completed:** Added P key as alternative to Space for pause/resume. Updated help dialog to show "Space / P" for pause.
+
+### 🟢 Add keyboard shortcuts to button labels
+**Priority:** Medium
+**Description:** Help is right, the button says Help (H). Also add Pause (P), Reset Data (R), Start Recording (V), Calibrate (C)
+**Completed:** Added keyboard shortcuts to all action buttons: Calibrate (C), Pause (P), Reset Data (R), Export Session (E), Start Recording (V). Shortcuts dynamically update when button text changes (e.g., Resume (P), Stop Recording (V)).
+
+### 🟢 Visualize Pause
+**Priority:** Medium
+**Description:** When Paused there's no indicator. provide some UI on the video feed, maybe the traditional pause symbol of two boxes, indicating that the functionality is paused.
+**Completed:** Added pause overlay on video feed showing two white vertical bars (pause symbol) with semi-transparent white background and "PAUSED" text. Overlay only appears when paused and doesn't get recorded to video files.
+
+### 🟢 Fix Reset Dialog Box and keyboard shortcut box color schemes
+**Priority:** Medium
+**Description:** The reset data popup and the keyboard shortcut box has text that is unreadable.. white on light grey in the dialog, and light grey on white in the keyboard shortcuts .. please fix that.
+**Completed:** Created create_styled_message_box() helper function with dark theme styling (dark blue background #071A2F, white text, styled buttons). Applied to all QMessageBox dialogs throughout the app for consistent dark theme. Help dialog already had proper styling.
 
 ---
 

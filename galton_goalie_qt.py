@@ -1261,13 +1261,14 @@ class SettingsDialog(QDialog):
             return
 
         # Confirm with user
-        reply = QMessageBox.question(
+        msg_box = create_styled_message_box(
             self,
             "Change Camera",
-            f"Switch to Camera {new_camera_idx}?\n\n"
-            "This will restart the video feed.",
+            f"Switch to Camera {new_camera_idx}?\n\nThis will restart the video feed.",
+            QMessageBox.Question,
             QMessageBox.Yes | QMessageBox.No
         )
+        reply = msg_box.exec_()
 
         if reply == QMessageBox.Yes:
             # Store new camera index
@@ -1381,8 +1382,12 @@ class SettingsDialog(QDialog):
         self.sensitivity_slider.setValue(threshold)
         self.minsize_slider.setValue(min_area)
 
-        QMessageBox.information(self, "Preset Applied",
-                               f"Applied '{preset_name.replace('_', ' ').title()}' preset!")
+        msg_box = create_styled_message_box(
+            self,
+            "Preset Applied",
+            f"Applied '{preset_name.replace('_', ' ').title()}' preset!"
+        )
+        msg_box.exec_()
 
     def reset_to_defaults(self):
         """Reset all settings to defaults."""
@@ -1396,7 +1401,8 @@ class SettingsDialog(QDialog):
             self.sensitivity_slider.setValue(DEFAULT_MOTION_THRESHOLD)
             self.minsize_slider.setValue(DEFAULT_MIN_CONTOUR_AREA)
 
-        QMessageBox.information(self, "Reset", "All settings reset to defaults!")
+        msg_box = create_styled_message_box(self, "Reset", "All settings reset to defaults!")
+        msg_box.exec_()
 
 
 class HelpOverlay(QDialog):
@@ -1466,7 +1472,7 @@ class HelpOverlay(QDialog):
                 ("4", "Ultra-long exposure mode"),
             ]),
             ("Controls", [
-                ("Space", "Pause/Resume counting"),
+                ("Space / P", "Pause/Resume counting"),
                 ("R", "Reset all data"),
                 ("C", "Open calibration dialog"),
                 ("S", "Open settings dialog"),
@@ -1557,6 +1563,40 @@ class HelpOverlay(QDialog):
             self.accept()
         else:
             super().keyPressEvent(event)
+
+
+def create_styled_message_box(parent, title, text, icon=QMessageBox.Information, buttons=QMessageBox.Ok):
+    """Create a QMessageBox with dark theme styling."""
+    msg_box = QMessageBox(parent)
+    msg_box.setWindowTitle(title)
+    msg_box.setText(text)
+    msg_box.setStandardButtons(buttons)
+    msg_box.setIcon(icon)
+
+    # Apply dark theme styling
+    msg_box.setStyleSheet("""
+        QMessageBox {
+            background-color: #071A2F;
+        }
+        QMessageBox QLabel {
+            color: white;
+            font-size: 13px;
+            min-width: 300px;
+        }
+        QPushButton {
+            background-color: #2C3E50;
+            color: white;
+            border: 1px solid #3E92CC;
+            border-radius: 4px;
+            padding: 8px 16px;
+            min-width: 80px;
+        }
+        QPushButton:hover {
+            background-color: #1C77C3;
+        }
+    """)
+
+    return msg_box
 
 
 class MainWindow(QMainWindow):
@@ -1774,27 +1814,27 @@ class MainWindow(QMainWindow):
         actions_group.setObjectName("sidebarGroup")
         actions_layout = QVBoxLayout()
 
-        self.calibrate_btn = QPushButton("🎯 Calibrate")
+        self.calibrate_btn = QPushButton("🎯 Calibrate (C)")
         self.calibrate_btn.setObjectName("primaryButton")
         self.calibrate_btn.clicked.connect(self.on_calibrate_clicked)
         actions_layout.addWidget(self.calibrate_btn)
 
-        self.pause_btn = QPushButton("⏸ Pause")
+        self.pause_btn = QPushButton("⏸ Pause (P)")
         self.pause_btn.setObjectName("secondaryButton")
         self.pause_btn.clicked.connect(self.on_pause_clicked)
         actions_layout.addWidget(self.pause_btn)
 
-        self.reset_btn = QPushButton("🔄 Reset Data")
+        self.reset_btn = QPushButton("🔄 Reset Data (R)")
         self.reset_btn.setObjectName("secondaryButton")
         self.reset_btn.clicked.connect(self.on_reset_clicked)
         actions_layout.addWidget(self.reset_btn)
 
-        self.export_btn = QPushButton("💾 Export Session")
+        self.export_btn = QPushButton("💾 Export Session (E)")
         self.export_btn.setObjectName("secondaryButton")
         self.export_btn.clicked.connect(self.on_export_clicked)
         actions_layout.addWidget(self.export_btn)
 
-        self.record_btn = QPushButton("🎬 Start Recording")
+        self.record_btn = QPushButton("🎬 Start Recording (V)")
         self.record_btn.setObjectName("secondaryButton")
         self.record_btn.clicked.connect(self.on_record_clicked)
         actions_layout.addWidget(self.record_btn)
@@ -2001,9 +2041,52 @@ class MainWindow(QMainWindow):
     def on_frame_ready(self, frame):
         """Handle new frame from video thread."""
         self.current_frame = frame.copy()  # Store for calibration dialog
-        self.viz_widget.update_frame(frame)
 
-        # Write to video file if recording
+        # Add pause indicator overlay if paused
+        display_frame = frame.copy()
+        if self.video_thread.paused:
+            # Draw semi-transparent overlay
+            overlay = display_frame.copy()
+            h, w = display_frame.shape[:2]
+
+            # Draw pause symbol (two vertical bars)
+            bar_width = 40
+            bar_height = 120
+            bar_gap = 30
+            center_x = w // 2
+            center_y = h // 2
+
+            # Left bar
+            cv2.rectangle(overlay,
+                         (center_x - bar_gap - bar_width, center_y - bar_height // 2),
+                         (center_x - bar_gap, center_y + bar_height // 2),
+                         (255, 255, 255), -1)
+
+            # Right bar
+            cv2.rectangle(overlay,
+                         (center_x + bar_gap, center_y - bar_height // 2),
+                         (center_x + bar_gap + bar_width, center_y + bar_height // 2),
+                         (255, 255, 255), -1)
+
+            # Blend overlay with original frame
+            cv2.addWeighted(overlay, 0.7, display_frame, 0.3, 0, display_frame)
+
+            # Add "PAUSED" text
+            font = cv2.FONT_HERSHEY_BOLD
+            text = "PAUSED"
+            font_scale = 2.0
+            thickness = 4
+            text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+            text_x = (w - text_size[0]) // 2
+            text_y = center_y + bar_height // 2 + 80
+
+            # Draw text with black outline
+            cv2.putText(display_frame, text, (text_x, text_y), font, font_scale, (0, 0, 0), thickness + 2)
+            cv2.putText(display_frame, text, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+
+        self.viz_widget.update_frame(display_frame)
+
+        # Write to video file if recording (write original frame without pause overlay)
         if self.recording and self.video_writer is not None:
             self.video_writer.write(frame)
 
@@ -2076,10 +2159,10 @@ class MainWindow(QMainWindow):
         self.video_thread.paused = not self.video_thread.paused
 
         if self.video_thread.paused:
-            self.pause_btn.setText("▶ Resume")
+            self.pause_btn.setText("▶ Resume (P)")
             self.pause_btn.setObjectName("primaryButton")
         else:
-            self.pause_btn.setText("⏸ Pause")
+            self.pause_btn.setText("⏸ Pause (P)")
             self.pause_btn.setObjectName("secondaryButton")
 
         # Reapply stylesheet to update button appearance
@@ -2089,8 +2172,13 @@ class MainWindow(QMainWindow):
     def on_calibrate_clicked(self):
         """Handle calibrate button click."""
         if self.current_frame is None:
-            QMessageBox.warning(self, "No Frame",
-                              "Waiting for camera feed... Please try again in a moment.")
+            msg_box = create_styled_message_box(
+                self,
+                "No Frame",
+                "Waiting for camera feed... Please try again in a moment.",
+                QMessageBox.Warning
+            )
+            msg_box.exec_()
             return
 
         # Pause video thread during calibration
@@ -2105,7 +2193,7 @@ class MainWindow(QMainWindow):
         # Resume video thread (restore previous state)
         self.video_thread.paused = was_paused
         if not was_paused:
-            self.pause_btn.setText("⏸ Pause")
+            self.pause_btn.setText("⏸ Pause (P)")
             self.pause_btn.setObjectName("secondaryButton")
             self.pause_btn.style().unpolish(self.pause_btn)
             self.pause_btn.style().polish(self.pause_btn)
@@ -2120,9 +2208,14 @@ class MainWindow(QMainWindow):
 
     def on_reset_clicked(self):
         """Reset all data."""
-        reply = QMessageBox.question(self, "Reset Data",
-                                    "Are you sure you want to reset all data?",
-                                    QMessageBox.Yes | QMessageBox.No)
+        msg_box = create_styled_message_box(
+            self,
+            "Reset Data",
+            "Are you sure you want to reset all data?",
+            QMessageBox.Question,
+            QMessageBox.Yes | QMessageBox.No
+        )
+        reply = msg_box.exec_()
 
         if reply == QMessageBox.Yes:
             self.bucket_counts = [0] * NUM_BUCKETS
@@ -2143,11 +2236,20 @@ class MainWindow(QMainWindow):
                     for i, count in enumerate(self.bucket_counts):
                         f.write(f"{i + 1},{count}\n")
 
-                QMessageBox.information(self, "Success",
-                                       f"Session data exported to:\n{filename}")
+                msg_box = create_styled_message_box(
+                    self,
+                    "Success",
+                    f"Session data exported to:\n{filename}"
+                )
+                msg_box.exec_()
             except Exception as e:
-                QMessageBox.critical(self, "Error",
-                                   f"Failed to export data:\n{str(e)}")
+                msg_box = create_styled_message_box(
+                    self,
+                    "Error",
+                    f"Failed to export data:\n{str(e)}",
+                    QMessageBox.Critical
+                )
+                msg_box.exec_()
 
     def on_record_clicked(self):
         """Toggle recording."""
@@ -2171,20 +2273,30 @@ class MainWindow(QMainWindow):
                 )
 
                 if self.video_writer.isOpened():
-                    self.record_btn.setText("⏹ Stop Recording")
+                    self.record_btn.setText("⏹ Stop Recording (V)")
                     self.rec_label.setVisible(True)
                     print(f"Recording started: {self.record_filename}")
                 else:
-                    QMessageBox.critical(self, "Recording Error",
-                                       "Failed to initialize video writer.")
+                    msg_box = create_styled_message_box(
+                        self,
+                        "Recording Error",
+                        "Failed to initialize video writer.",
+                        QMessageBox.Critical
+                    )
+                    msg_box.exec_()
                     self.recording = False
             else:
-                QMessageBox.warning(self, "No Frame",
-                                  "Waiting for camera feed... Please try again.")
+                msg_box = create_styled_message_box(
+                    self,
+                    "No Frame",
+                    "Waiting for camera feed... Please try again.",
+                    QMessageBox.Warning
+                )
+                msg_box.exec_()
                 self.recording = False
         else:
             # Stop recording - release video writer
-            self.record_btn.setText("🎬 Start Recording")
+            self.record_btn.setText("🎬 Start Recording (V)")
             self.rec_label.setVisible(False)
 
             if self.video_writer is not None:
@@ -2216,8 +2328,12 @@ class MainWindow(QMainWindow):
         # Save the new camera index
         self.save_config()
 
-        QMessageBox.information(self, "Camera Changed",
-                              f"Successfully switched to Camera {camera_index}")
+        msg_box = create_styled_message_box(
+            self,
+            "Camera Changed",
+            f"Successfully switched to Camera {camera_index}"
+        )
+        msg_box.exec_()
 
     def load_config(self):
         """Load configuration from file."""
@@ -2327,7 +2443,8 @@ class MainWindow(QMainWindow):
         # Ctrl+S - Save config
         elif modifiers == Qt.ControlModifier and key == Qt.Key_S:
             self.save_config()
-            QMessageBox.information(self, "Saved", "Configuration saved successfully!")
+            msg_box = create_styled_message_box(self, "Saved", "Configuration saved successfully!")
+            msg_box.exec_()
 
         # H or ? - Help
         elif key == Qt.Key_H or key == Qt.Key_Question:
@@ -2353,8 +2470,8 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key_V:
             self.on_record_clicked()
 
-        # Space - Pause/Resume
-        elif key == Qt.Key_Space:
+        # Space or P - Pause/Resume
+        elif key == Qt.Key_Space or key == Qt.Key_P:
             self.video_thread.paused = not self.video_thread.paused
 
         # 1-4 - Direct mode selection

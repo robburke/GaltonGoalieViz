@@ -8,7 +8,12 @@
       "Bash(taskkill:*)",
       "Bash(git init:*)",
       "Bash(dir:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(gh:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)"
     ]
   }
 }
