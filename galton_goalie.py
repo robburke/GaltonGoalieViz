@@ -63,6 +63,7 @@ class GaltonGoalieApp:
         self.recording = False
         self.video_writer = None
         self.record_start_time = 0
+        self.record_full_ui = True  # True = record with overlays, False = clean video only
 
         # Motion trails and long exposure
         # trail_mode: 0=Off, 1=Motion Trails, 2=Long Exposure, 3=Ultra-Long Exposure
@@ -254,6 +255,10 @@ class GaltonGoalieApp:
     def on_trail_fade_change(self, val):
         """Callback for trail fade slider."""
         self.trail_fade = max(50, min(99, val))  # Clamp between 50-99
+
+    def on_record_mode_change(self, val):
+        """Callback for record mode checkbox."""
+        self.record_full_ui = (val == 1)
 
     def switch_camera(self, index):
         """Switch to a different camera."""
@@ -555,7 +560,7 @@ class GaltonGoalieApp:
 
         # Create a separate control panel window with short labels
         cv2.namedWindow("Controls", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("Controls", 400, 150)
+        cv2.resizeWindow("Controls", 400, 200)
         cv2.createTrackbar("Cooldown", "Controls",
                           self.cooldown_frames, 120, self.on_cooldown_change)
         cv2.createTrackbar("Sensitivity", "Controls",
@@ -564,6 +569,8 @@ class GaltonGoalieApp:
                           self.min_contour_area, 1000, self.on_contour_change)
         cv2.createTrackbar("Trail Fade", "Controls",
                           self.trail_fade, 99, self.on_trail_fade_change)
+        cv2.createTrackbar("Rec Full UI", "Controls",
+                          1, 1, self.on_record_mode_change)
 
         while True:
             ret, frame = self.cap.read()
@@ -597,12 +604,17 @@ class GaltonGoalieApp:
             elif self.trail_mode == 3:  # Ultra-Long Exposure
                 frame = self.apply_ultra_long_exposure(frame)
 
+            # Save clean frame (without overlays) for clean recording mode
+            clean_frame = frame.copy() if (self.recording and not self.record_full_ui) else None
+
             # Draw overlay
             frame = self.draw_overlay(frame)
 
             # Write frame if recording
             if self.recording and self.video_writer:
-                self.video_writer.write(frame)
+                # Record clean video (no overlays) or full UI based on setting
+                frame_to_record = clean_frame if not self.record_full_ui else frame
+                self.video_writer.write(frame_to_record)
 
             # Show frame
             cv2.imshow("Galton's Goalie", frame)

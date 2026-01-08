@@ -81,8 +81,8 @@ class VideoThread(QThread):
         self.motion_threshold = DEFAULT_MOTION_THRESHOLD
         self.min_contour_area = DEFAULT_MIN_CONTOUR_AREA
         self.trail_fade = 70  # Fade rate for mode 1 (Motion Trails)
-        self.trail_size = 2  # Thickness/dilation iterations for mode 1
-        self.long_exposure_duration = 50  # Persistence for mode 2 (1-100)
+        self.trail_size = 3  # Thickness/dilation iterations for mode 1
+        self.long_exposure_duration = 85  # Persistence for mode 2 (1-100)
         self.trail_color_index = 0
         self.show_bucket_overlay = True  # Show bucket dividers on video
         self.flip_horizontal = False  # Flip camera feed horizontally
@@ -90,6 +90,9 @@ class VideoThread(QThread):
         # Cooldown and glow tracking
         self.cooldown_counters = [0] * NUM_BUCKETS
         self.glow_counters = [0] * NUM_BUCKETS
+
+        # Frame storage for clean recording
+        self.clean_frame = None  # Frame before overlays for clean recording mode
 
         # Trail colors (BGR format)
         self.trail_colors = [
@@ -175,6 +178,9 @@ class VideoThread(QThread):
             frame = self.apply_long_exposure(frame)
         elif self.trail_mode == 3:
             frame = self.apply_ultra_long_exposure(frame)
+
+        # Save clean frame (camera + trails, no overlays) for clean recording mode
+        self.clean_frame = frame.copy()
 
         # Draw bucket overlay if enabled
         if self.show_bucket_overlay and self.goal_region:
@@ -999,26 +1005,26 @@ class SettingsDialog(QDialog):
         mode_settings_layout = QVBoxLayout()
 
         # Trail size (Mode 1)
-        trail_size_label = QLabel(f"Trail Size (Mode 1): {self.video_thread.trail_size if self.video_thread else 2}")
+        trail_size_label = QLabel(f"Trail Size (Mode 1): {self.video_thread.trail_size if self.video_thread else 3}")
         mode_settings_layout.addWidget(trail_size_label)
 
         self.trail_size_slider = QSlider(Qt.Horizontal)
         self.trail_size_slider.setMinimum(1)
         self.trail_size_slider.setMaximum(5)
-        self.trail_size_slider.setValue(self.video_thread.trail_size if self.video_thread else 2)
+        self.trail_size_slider.setValue(self.video_thread.trail_size if self.video_thread else 3)
         self.trail_size_slider.valueChanged.connect(
             lambda v: self.update_visual_value('trail_size', v, trail_size_label)
         )
         mode_settings_layout.addWidget(self.trail_size_slider)
 
         # Long exposure duration (Mode 2)
-        exp_duration_label = QLabel(f"Streak Duration (Mode 2): {self.video_thread.long_exposure_duration if self.video_thread else 50}%")
+        exp_duration_label = QLabel(f"Streak Duration (Mode 2): {self.video_thread.long_exposure_duration if self.video_thread else 85}%")
         mode_settings_layout.addWidget(exp_duration_label)
 
         self.exp_duration_slider = QSlider(Qt.Horizontal)
         self.exp_duration_slider.setMinimum(1)
         self.exp_duration_slider.setMaximum(100)
-        self.exp_duration_slider.setValue(self.video_thread.long_exposure_duration if self.video_thread else 50)
+        self.exp_duration_slider.setValue(self.video_thread.long_exposure_duration if self.video_thread else 85)
         self.exp_duration_slider.valueChanged.connect(
             lambda v: self.update_visual_value('exposure_duration', v, exp_duration_label)
         )
@@ -1097,6 +1103,32 @@ class SettingsDialog(QDialog):
 
         format_group.setLayout(format_layout)
         layout.addWidget(format_group)
+
+        # Recording mode
+        mode_group = QGroupBox("Recording Mode")
+        mode_layout = QVBoxLayout()
+
+        self.record_full_ui_check = QCheckBox("Record Full UI (with bucket overlay)")
+        # Load current state from parent
+        if self.parent() and hasattr(self.parent(), 'record_full_ui'):
+            self.record_full_ui_check.setChecked(self.parent().record_full_ui)
+        else:
+            self.record_full_ui_check.setChecked(True)  # Default to full UI
+        self.record_full_ui_check.setToolTip(
+            "Checked: Record camera feed with bucket dividers and overlays\n"
+            "Unchecked: Record clean video (camera + trails only, no overlays)"
+        )
+        self.record_full_ui_check.stateChanged.connect(self.toggle_record_mode)
+        mode_layout.addWidget(self.record_full_ui_check)
+
+        mode_info = QLabel("Tip: Uncheck for clean videos perfect for sharing.\n"
+                          "The histogram is never included in recordings.")
+        mode_info.setWordWrap(True)
+        mode_info.setStyleSheet("color: #BDC3C7; font-style: italic;")
+        mode_layout.addWidget(mode_info)
+
+        mode_group.setLayout(mode_layout)
+        layout.addWidget(mode_group)
 
         layout.addStretch()
         return widget
@@ -1348,6 +1380,11 @@ class SettingsDialog(QDialog):
         if self.parent():
             self.parent().histogram_widget.show_stats_on_graph = (state == Qt.Checked)
             self.parent().histogram_widget.update()
+
+    def toggle_record_mode(self, state):
+        """Toggle recording mode between full UI and clean video."""
+        if self.parent():
+            self.parent().record_full_ui = (state == Qt.Checked)
 
     def change_output_folder(self):
         """Change output folder for recordings."""
@@ -1617,6 +1654,7 @@ class MainWindow(QMainWindow):
         self.record_filename = None
         self.current_frame = None  # Store latest frame for calibration
         self.recording_output_folder = "."  # Default to current directory
+        self.record_full_ui = True  # True = record with overlays, False = clean video only
 
         # Load camera index from config before creating video thread
         camera_index = 0  # Default camera
@@ -2072,7 +2110,7 @@ class MainWindow(QMainWindow):
             cv2.addWeighted(overlay, 0.7, display_frame, 0.3, 0, display_frame)
 
             # Add "PAUSED" text
-            font = cv2.FONT_HERSHEY_BOLD
+            font = cv2.FONT_HERSHEY_SIMPLEX
             text = "PAUSED"
             font_scale = 2.0
             thickness = 4
@@ -2088,7 +2126,17 @@ class MainWindow(QMainWindow):
 
         # Write to video file if recording (write original frame without pause overlay)
         if self.recording and self.video_writer is not None:
-            self.video_writer.write(frame)
+            # Choose which frame to record based on mode
+            if self.record_full_ui:
+                # Record full UI - capture entire application window
+                self.record_full_ui_frame()
+            else:
+                # Record clean video (camera + trails only, no overlays)
+                if self.video_thread.clean_frame is not None:
+                    self.video_writer.write(self.video_thread.clean_frame)
+                else:
+                    # Fallback to regular frame if clean frame not available
+                    self.video_writer.write(frame)
 
     @pyqtSlot(list)
     def on_detection(self, buckets):
@@ -2251,6 +2299,33 @@ class MainWindow(QMainWindow):
                 )
                 msg_box.exec_()
 
+    def record_full_ui_frame(self):
+        """Capture and record the entire UI window."""
+        try:
+            from PyQt5.QtGui import QImage
+
+            # Grab the central widget as a pixmap
+            pixmap = self.centralWidget().grab()
+
+            # Convert QPixmap to QImage in RGB888 format (consistent format)
+            qimage = pixmap.toImage().convertToFormat(QImage.Format_RGB888)
+
+            # Convert QImage to numpy array
+            width = qimage.width()
+            height = qimage.height()
+            ptr = qimage.bits()
+            ptr.setsize(height * width * 3)  # 3 bytes per pixel (RGB)
+            arr = np.frombuffer(ptr, np.uint8).reshape((height, width, 3))
+
+            # Convert RGB to BGR for OpenCV
+            frame_bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+
+            # Write to video
+            if self.video_writer is not None:
+                self.video_writer.write(frame_bgr)
+        except Exception as e:
+            print(f"Error capturing full UI: {e}")
+
     def on_record_clicked(self):
         """Toggle recording."""
         self.recording = not self.recording
@@ -2263,9 +2338,19 @@ class MainWindow(QMainWindow):
             filename = f"galton_recording_{timestamp}.mp4"
             self.record_filename = os.path.join(self.recording_output_folder, filename)
 
-            # Get frame dimensions from current frame
-            if self.current_frame is not None:
-                height, width = self.current_frame.shape[:2]
+            # Get frame dimensions based on recording mode
+            if self.record_full_ui:
+                # Get dimensions from central widget for full UI recording
+                width = self.centralWidget().width()
+                height = self.centralWidget().height()
+            else:
+                # Get dimensions from current frame for clean video recording
+                if self.current_frame is not None:
+                    height, width = self.current_frame.shape[:2]
+                else:
+                    width = height = 0
+
+            if width > 0 and height > 0:
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 fps = self.video_thread.fps if self.video_thread.fps > 0 else 30.0
                 self.video_writer = cv2.VideoWriter(
@@ -2380,6 +2465,8 @@ class MainWindow(QMainWindow):
                     # Recording settings
                     if 'recording_output_folder' in config:
                         self.recording_output_folder = config['recording_output_folder']
+                    if 'record_full_ui' in config:
+                        self.record_full_ui = config['record_full_ui']
 
             except Exception as e:
                 print(f"Could not load config: {e}")
@@ -2411,6 +2498,7 @@ class MainWindow(QMainWindow):
 
         # Recording settings
         config['recording_output_folder'] = self.recording_output_folder
+        config['record_full_ui'] = self.record_full_ui
 
         try:
             with open(CONFIG_FILE, 'w') as f:
