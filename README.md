@@ -4,7 +4,7 @@ A real-time computer vision app that tracks balls shot through a Galton board (P
 
 Inspired by the [CrunchLabs](https://www.crunchlabs.com/) ["Galton's Goalie" project](https://www.crunchlabs.com/products/galtons-goalie?srsltid=AfmBOoqQ8V6aj6XHOs5uSdeRfJU1NJJluky5hNH1kjtexU9fOu944Vwk), but could be adapted for any similar setup.
 
-A YouTube video showing an earlier version of this in action is [here - I need to update this to the new UI and features](https://www.youtube.com/watch?v=Z8H1zYT_3DY)!
+A YouTube video showing an earlier version of this in action is [here - I need to update this to the new UI and features](https://www.youtube.com/watch?v=Z8H1zYT_3DY) 
 
 ## What It Does
 
