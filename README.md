@@ -18,7 +18,7 @@ A YouTube video showing an earlier version of this in action is [here](https://w
 
 ![Demo: Real-time ball tracking and histogram visualization](demo.webp)
 
-With the game board removed, you can watch motion trails and use long exposures to visualize the bell curve forming. Ultra-long exposure lets you see the "Plinko" trails pile up in real time. In addition to looking cool, maybe this will also help you "debug" physical inaccuracies in your Plinko pin  setup, like it did for us! 
+With the game board removed, you can use motion trails and long exposures to watch the balls bouncing down the "Plinko" pegs. Ultra-long exposure lets you see the "Plinko" trails build up in real time. In addition to looking cool, maybe this will also help you "debug" physical inaccuracies in your pinboard setup, like it did for us!  
 
 ## Installation
 
