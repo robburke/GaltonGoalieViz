@@ -14,7 +14,7 @@ A YouTube video showing an earlier version of this in action is [here](https://w
 4. **Displays a real-time histogram** showing the distribution (which forms a bell curve over time)
 5. **Visualizes ball paths** with motion trails or long-exposure effects
 
-![Demo: Real-time ball tracking and histogram visualization](demo.gif)
+![Demo: Real-time ball tracking and histogram visualization](GaltonNewUISampleVid.mp4)
 
 ## Installation
 
