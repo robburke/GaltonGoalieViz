@@ -111,7 +111,7 @@ This visualizer lets you watch that mathematical principle emerge in real-time!
 ## Troubleshooting
 
 **"Could not open camera"**
-- Try a different camera index (press 1, 2, etc.)
+- Try a different camera index (press 1, 2, etc. - UI will default to camera 1)
 - Make sure no other app is using the webcam
 
 **Balls not being detected**
@@ -135,4 +135,4 @@ MIT License - feel free to modify and share!
 
 ---
 
-*Built with OpenCV and Python. Have fun watching probability in action!*
+*Built with OpenCV and Python. See the write-up on [https://robburke.net/side-quests](https://robburke.net/side-quests/galtons-goalie/) . Have fun watching probability in action!*
