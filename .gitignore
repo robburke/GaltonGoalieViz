@@ -32,3 +32,7 @@ nul
 # Claude Code: per-machine settings and its temp cwd files
 .claude/settings.local.json
 tmpclaude-*-cwd
+
+# Raw demo recordings (local takes, not kept in git)
+galton_recording_*.mp4
+GaltonsGoalieDemo*.mp4
