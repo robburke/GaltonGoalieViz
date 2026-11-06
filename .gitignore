@@ -28,3 +28,7 @@ recordings/
 # Temporary files
 nul
 *.tmp
+
+# Claude Code: per-machine settings and its temp cwd files
+.claude/settings.local.json
+tmpclaude-*-cwd
